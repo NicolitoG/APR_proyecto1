@@ -173,8 +173,8 @@
   \end{columns}
 \end{frame}
 
-\section{Recompensa, estado y política}
-\begin{frame}{Recompensa, estado y política: variables del estado}
+\section{Recompensa, estado y acción}
+\begin{frame}{Recompensa, estado y acción: variables del estado}
   \small
   \begin{columns}[T,onlytextwidth]
     \column{0.65\textwidth}
@@ -206,14 +206,14 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{Recompensa, estado y política: decisión y evaluación}
+\begin{frame}{Recompensa, estado y acción: decisión y evaluación}
   \small
   \begin{columns}[T,onlytextwidth]
     \column{0.65\textwidth}
-      \begin{block}{Política de decisión $Y$}
+      \begin{block}{Acción $A$}
         Vector de dimensión $S\times 1$, con una decisión por satélite:
         \[
-          Y=(y_1,\ldots,y_S)^{\mathsf{T}},\qquad y_s\in\{0,1\}.
+          A=(a_1,\ldots,a_S)^{\mathsf{T}},\qquad a_s\in\{0,1\}.
         \]
         \textbf{1:} activar el procesamiento.\quad
         \textbf{0:} desactivarlo.
@@ -247,7 +247,7 @@
       \end{projectpoints}
       \vspace{0.4em}
       \begin{block}{En cada instante $t$}
-        Observar las variables del ambiente, elegir la política $Y$,
+        Observar las variables del ambiente, elegir la acción $A$,
         aplicarla a los satélites y evaluar el resultado con la recompensa $r$.
       \end{block}
     \column{0.31\textwidth}
