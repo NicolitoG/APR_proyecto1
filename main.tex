@@ -1,0 +1,128 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+% Build from this directory: latexmk -xelatex main.tex
+\input{estilo-diinf.tex}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{appendixnumberbeamer}
+\usetikzlibrary{fit,backgrounds}
+\setbeameroption{hide notes}
+% Use the section title slides provided by estilo-diinf.tex.
+
+\title[Proyecto RL]{Proyecto RL}
+% \subtitle{Learning where to compute in a moving constellation}
+\author[Camilo J. Rojas Milla]{Camilo José Rojas Milla}
+\institute{}
+\date{}
+\hypersetup{
+  pdftitle={Proyecto RL },
+  pdfauthor={Camilo Jose Rojas Milla},
+%   pdfsubject={Budget-constrained PPO server placement in MeteorNet},
+  pdfkeywords={Orbital edge computing, PPO, MeteorNet, satellite networks},
+  colorlinks=true,urlcolor=diinfTurquesaOscuro,linkcolor=diinfTextoSecundario
+}
+
+\newcommand{\trajectorycell}[4]{%
+  \begingroup
+  \setlength{\fboxsep}{0pt}%
+  \fbox{%
+  \begin{minipage}[t][3.5cm][c]{6cm}
+    \centering
+    \vspace{0.1cm}
+    {\scriptsize\textbf{#2}}\\[-0.5em]
+    {\tiny #3}\\[-0.6em]
+    {\tiny #4}\\[0.1em]
+    #1
+  \end{minipage}}%
+  \endgroup
+}
+
+\newcommand{\source}[1]{\fuente{#1}}
+\newcommand{\paperfigure}{\source{Source: current paper.}}
+\newcommand{\takeaway}[1]{\vspace{0.25em}\idea{#1}}
+\newenvironment{points}{\begin{itemize}\setlength\itemsep{0.8em}}{\end{itemize}}
+\newcommand{\stat}[3]{%
+  \begin{minipage}[t]{#1}\centering
+    {\fontsize{30}{34}\selectfont\bfseries\color{diinfTurquesaOscuro}#2\par}
+    \vspace{0.45em}{\normalsize #3\par}
+  \end{minipage}%
+}
+\tikzset{
+  flowbox/.style={draw=diinfTurquesaOscuro,fill=diinfFondoTurquesa,
+    rounded corners=3pt,align=center,minimum height=1.05cm,
+    text width=2.65cm,inner sep=6pt,font=\small},
+  flowarrow/.style={-{Latex[length=2.5mm]},thick,diinfTurquesaOscuro},
+  mutedbox/.style={flowbox,draw=diinfGris!50,fill=diinfFondo},
+  purplebox/.style={flowbox,draw=diinfVioleta,fill=diinfVioleta!7}
+}
+
+\begin{document}
+
+% 01 -- Title (about 30 seconds).
+\begin{frame}[plain,noframenumbering]
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[diinfTurquesa] (current page.south west)
+      rectangle ([xshift=0.42cm]current page.north west);
+    \fill[diinfTurquesa!12] ([xshift=0.42cm]current page.south west)
+      rectangle ([xshift=0.62cm]current page.north west);
+    \node[anchor=north east] at
+      ([xshift=-0.76cm,yshift=-0.58cm]current page.north east) {\diinflogo};
+    \node[anchor=north west,text width=13.6cm,align=left] at
+      ([xshift=1.15cm,yshift=-2.5cm]current page.north west) {
+      {\fontsize{27}{33}\selectfont\bfseries\color{diinfGris}
+        Proyecto RL \\ [1em]
+        Descarga de Datos a Red Satelital}\par\vspace{0.55em}
+      {\fontsize{15}{20}\selectfont\color{diinfTurquesaOscuro}\insertsubtitle}
+    };
+    \draw[diinfVioleta,line width=1pt]
+      ([xshift=1.15cm,yshift=2.6cm]current page.south west) --
+      ([xshift=7.5cm,yshift=2.6cm]current page.south west);
+    \node[anchor=south west,text width=13.3cm,align=left] at
+      ([xshift=1.15cm,yshift=0.75cm]current page.south west) {
+      {\large\bfseries\insertauthor}
+    };
+  \end{tikzpicture}
+\end{frame}
+
+\begin{frame}
+\begin{columns}
+ \column{0.6\textwidth}
+ \includegraphics[width=\textwidth]{images/constellation.pdf}
+
+ \column{0.4\textwidth}
+ \begin{block}{Objetivo}
+ Descargar datos generados por usuarios a red satelital.
+\end{block}
+\ \\[1em]
+
+ Datos del Ambiente
+ \begin{itemize}
+\item Número de usuarios en linea vista por satélite
+\item Datos por usuarios disponibles
+\item Carga de la batería
+\item Posición del sol
+\item Posición de los satelites
+\item Lat Lon de los satelites
+
+ \end{itemize}
+
+
+\end{columns}
+
+\end{frame}
+
+
+
+
+% \begin{frame}[c]{Cierre}
+%   \centering
+%   {\LARGE\bfseries\color{diinfTurquesaOscuro}Gracias por su Atención!\par}
+%   \vspace{0.8em}
+%   {\large Esperamos Trabajar Contigo.\par}
+%   \vspace{2em}
+%   {\Large\bfseries\insertauthor\par}
+%   \vspace{0.5em}
+%   {\large\href{mailto:camilo.rojas.m@usach.cl}{camilo.rojas.m@usach.cl}\par}
+% \end{frame}
+
+\end{document}
