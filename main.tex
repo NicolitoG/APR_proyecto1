@@ -69,6 +69,29 @@
   purplebox/.style={flowbox,draw=diinfVioleta,fill=diinfVioleta!7}
 }
 
+% Shared RL diagram: images replace the agent and environment boxes.
+\newcommand{\diagramarl}{%
+  \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[font=\normalsize]
+      \path[use as bounding box] (-2.15,-2.25) rectangle (2.15,2.25);
+      \node[inner sep=3pt] (agente) at (0,1.35)
+        {\includegraphics[width=1.15cm]{images/cerebro.png}};
+      \node[inner sep=3pt] (ambiente) at (0,-1.25)
+        {\includegraphics[width=1.8cm]{images/starlink.pdf}};
+      \draw[flowarrow,diinfVioleta]
+        (agente.east) -- (1.55,1.35)
+        -- node[right,inner sep=4pt] {$A_t$} (1.55,-1.25)
+        -- (ambiente.east);
+      \draw[flowarrow]
+        (ambiente.west) -- (-1.55,-1.25)
+        -- node[left,inner sep=4pt] {$S_t$} (-1.55,1.35)
+        -- (agente.west);
+      \draw[flowarrow]
+        (ambiente.north) -- node[right,inner sep=4pt] {$r_t$} (agente.south);
+    \end{tikzpicture}%
+  }%
+}
+
 \begin{document}
 
 % Portada.
@@ -123,10 +146,9 @@
 \begin{frame}{Ambiente: segmento espacial y terrestre}
   \small
   \begin{columns}[T,onlytextwidth]
-    \column{0.65\textwidth}
-      \begin{projectpoints}
-        \setlength\itemsep{0.75em}
-        \item \textbf{Segmento espacial}
+    \column{0.5\textwidth}
+
+        \textbf{Segmento espacial}
           \begin{itemize}
             \setlength\itemsep{0.25em}
             \item Satélites en órbitas \textbf{LEO}.
@@ -135,19 +157,19 @@
             \item El ambiente entrega variables operacionales cuando
               hay usuarios en línea de vista.
           \end{itemize}
-        \item \textbf{Segmento terrestre}
+
+
+    \column{0.5\textwidth}
+             \textbf{Segmento terrestre}
           \begin{itemize}
             \setlength\itemsep{0.25em}
-            \item Los usuarios generan tareas aleatoriamente; una nueva
-              solo cuando la anterior se completa o falla.
-            \item \textbf{Éxito:} cargar la tarea al \textbf{satélite activo
-              más cercano} en línea de vista.
-            \item \textbf{Fallo:} transcurren $R_T$ segundos sin completarse.
+            \item Los usuarios generan tareas aleatoriamente; una nueva solo cuando la anterior se completa o falla.
+            \item \textbf{Éxito:} cargar la tarea al \textbf{satélite activo más cercano} en línea de vista. \textbf{Fallo:} transcurren $R_T$ segundos sin completarse.
           \end{itemize}
-      \end{projectpoints}
-    \column{0.31\textwidth}
-      \figurapendiente{Segmentos espacial y terrestre}
+
   \end{columns}
+  \centering
+  \includegraphics[width=0.75\textwidth]{images/segmentos.pdf}
 \end{frame}
 
 \section{Restricciones}
@@ -202,7 +224,7 @@
         $P_s=(x_s,y_s,z_s)$;\quad
         $L_s=(\mathrm{lat}_s,\mathrm{lon}_s,h_s)$.\par}
     \column{0.31\textwidth}
-      \figurapendiente{Observaciones por satélite}
+      \diagramarl
   \end{columns}
 \end{frame}
 
@@ -228,7 +250,7 @@
       \vspace{0.3em}
       $S$ es el número de satélites de la constelación.
     \column{0.31\textwidth}
-      \figurapendiente{Decisiones y resultados de las tareas}
+      \diagramarl
   \end{columns}
 \end{frame}
 
