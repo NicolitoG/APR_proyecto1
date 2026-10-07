@@ -7,18 +7,20 @@
 \usepackage{appendixnumberbeamer}
 \usetikzlibrary{fit,backgrounds}
 \setbeameroption{hide notes}
-% Use the section title slides provided by estilo-diinf.tex.
+% Keep sections in the footer without adding separate section title slides.
+\AtBeginSection[]{}
+\setbeamerfont{itemize/enumerate body}{size=\small}
 
 \title[Proyecto RL]{Proyecto RL}
-% \subtitle{Learning where to compute in a moving constellation}
+\subtitle{Procesamiento de tareas en red satelital}
 \author[Camilo J. Rojas Milla]{Camilo José Rojas Milla}
 \institute{}
 \date{}
 \hypersetup{
-  pdftitle={Proyecto RL },
+  pdftitle={Proyecto RL: procesamiento de tareas en red satelital},
   pdfauthor={Camilo Jose Rojas Milla},
-%   pdfsubject={Budget-constrained PPO server placement in MeteorNet},
-  pdfkeywords={Orbital edge computing, PPO, MeteorNet, satellite networks},
+  pdfsubject={Ambiente de aprendizaje por refuerzo para procesamiento satelital},
+  pdfkeywords={Aprendizaje por refuerzo, Gymnasium, redes satelitales, procesamiento de tareas},
   colorlinks=true,urlcolor=diinfTurquesaOscuro,linkcolor=diinfTextoSecundario
 }
 
@@ -41,6 +43,17 @@
 \newcommand{\paperfigure}{\source{Source: current paper.}}
 \newcommand{\takeaway}[1]{\vspace{0.25em}\idea{#1}}
 \newenvironment{points}{\begin{itemize}\setlength\itemsep{0.8em}}{\end{itemize}}
+\newenvironment{projectpoints}{\begin{itemize}\setlength\itemsep{0.55em}}{\end{itemize}}
+% Replace each placeholder with \includegraphics when its figure is ready.
+\newcommand{\figurapendiente}[1]{%
+  \begin{tikzpicture}
+    \node[draw=diinfGris!25,dashed,rounded corners=3pt,
+      fill=diinfFondo!50,minimum height=4.6cm,
+      text width=\dimexpr\linewidth-16pt\relax,inner sep=7pt,
+      align=center,text=diinfTextoSecundario,font=\scriptsize]
+      {Figura por incorporar\\[0.6em]#1};
+  \end{tikzpicture}%
+}
 \newcommand{\stat}[3]{%
   \begin{minipage}[t]{#1}\centering
     {\fontsize{30}{34}\selectfont\bfseries\color{diinfTurquesaOscuro}#2\par}
@@ -58,7 +71,7 @@
 
 \begin{document}
 
-% 01 -- Title (about 30 seconds).
+% Portada.
 \begin{frame}[plain,noframenumbering]
   \begin{tikzpicture}[remember picture,overlay]
     \fill[diinfTurquesa] (current page.south west)
@@ -68,11 +81,11 @@
     \node[anchor=north east] at
       ([xshift=-0.76cm,yshift=-0.58cm]current page.north east) {\diinflogo};
     \node[anchor=north west,text width=13.6cm,align=left] at
-      ([xshift=1.15cm,yshift=-2.5cm]current page.north west) {
+      ([xshift=1.15cm,yshift=-2.15cm]current page.north west) {
       {\fontsize{27}{33}\selectfont\bfseries\color{diinfGris}
-        Proyecto RL \\ [1em]
-        Descarga de Datos a Red Satelital}\par\vspace{0.55em}
-      {\fontsize{15}{20}\selectfont\color{diinfTurquesaOscuro}\insertsubtitle}
+        Proyecto RL \\[0.65em]
+        Procesamiento de tareas\\
+        en red satelital}\par
     };
     \draw[diinfVioleta,line width=1pt]
       ([xshift=1.15cm,yshift=2.6cm]current page.south west) --
@@ -84,31 +97,162 @@
   \end{tikzpicture}
 \end{frame}
 
-\begin{frame}
-\begin{columns}
- \column{0.6\textwidth}
- \includegraphics[width=\textwidth]{images/constellation.pdf}
+\section{Introducción}
+\begin{frame}{Introducción}
+  \small
+  \begin{columns}[c,onlytextwidth]
+    \column{0.55\textwidth}
+      % Keep the original diagram on the first content slide.
+      \includegraphics[width=\linewidth]{images/constellation.pdf}
+    \column{0.42\textwidth}
+      \begin{block}{Objetivo}
+        Decidir qué satélites estarán disponibles para procesar
+        tareas generadas por usuarios en tierra.
+      \end{block}
+      \vspace{0.6em}
+      \textbf{Ambiente de aprendizaje}
+      \begin{projectpoints}
+        \item Implementación en \textbf{Python} con \textbf{Gymnasium}.
+        \item Datos del ambiente disponibles en cada paso $\delta t$.
+        \item Decisión: activar o desactivar el procesamiento en los satélites.
+      \end{projectpoints}
+  \end{columns}
+\end{frame}
 
- \column{0.4\textwidth}
- \begin{block}{Objetivo}
- Descargar datos generados por usuarios a red satelital.
-\end{block}
-\ \\[1em]
+\section{Ambiente}
+\begin{frame}{Ambiente: segmento espacial y terrestre}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \column{0.65\textwidth}
+      \begin{projectpoints}
+        \setlength\itemsep{0.75em}
+        \item \textbf{Segmento espacial}
+          \begin{itemize}
+            \setlength\itemsep{0.25em}
+            \item Satélites en órbitas \textbf{LEO}.
+            \item Estado \textbf{activo}: procesa tareas;
+              \textbf{pasivo}: no procesa.
+            \item El ambiente entrega variables operacionales cuando
+              hay usuarios en línea de vista.
+          \end{itemize}
+        \item \textbf{Segmento terrestre}
+          \begin{itemize}
+            \setlength\itemsep{0.25em}
+            \item Los usuarios generan tareas aleatoriamente; una nueva
+              solo cuando la anterior se completa o falla.
+            \item \textbf{Éxito:} cargar la tarea al \textbf{satélite activo
+              más cercano} en línea de vista.
+            \item \textbf{Fallo:} transcurren $R_T$ segundos sin completarse.
+          \end{itemize}
+      \end{projectpoints}
+    \column{0.31\textwidth}
+      \figurapendiente{Segmentos espacial y terrestre}
+  \end{columns}
+\end{frame}
 
- Datos del Ambiente
- \begin{itemize}
-\item Número de usuarios en linea vista por satélite
-\item Datos por usuarios disponibles
-\item Carga de la batería
-\item Posición del sol
-\item Posición de los satelites
-\item Lat Lon de los satelites
+\section{Restricciones}
+\begin{frame}{Restricciones: batería y disponibilidad}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \column{0.65\textwidth}
+      \begin{projectpoints}
+        \item \textbf{Día orbital:} la batería se carga mediante paneles
+          solares cuando el satélite recibe luz del Sol.
+        \item \textbf{Noche orbital:} se descarga cuando la Tierra bloquea
+          la luz solar. El ciclo orbital dura aproximadamente \textbf{90 minutos}.
+        \item \textbf{Estado activo:} la batería se descarga más rápido;
+          procesar cada tarea produce una descarga adicional.
+      \end{projectpoints}
+      \vspace{0.4em}
+      \begin{alertblock}{Límite de batería}
+        Al alcanzar la capacidad límite, el satélite pierde la capacidad
+        de procesar tareas hasta recargarse.
+      \end{alertblock}
+    \column{0.31\textwidth}
+      \figurapendiente{Carga, descarga y ciclo orbital}
+  \end{columns}
+\end{frame}
 
- \end{itemize}
+\section{Recompensa, estado y política}
+\begin{frame}{Recompensa, estado y política: variables del estado}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \column{0.65\textwidth}
+      Para cada instante $t$ y satélite $s$, el estado puede incluir:
+      \vspace{0.5em}
 
+      {\renewcommand{\arraystretch}{1.22}
+      \begin{tabularx}{\linewidth}{@{}lY@{}}
+        \toprule
+        \textbf{Variable} & \textbf{Información del ambiente} \\
+        \midrule
+        $u_s$ & Número de usuarios en línea de vista. \\
+        $U_s$ & Identidad de los usuarios. \\
+        $T_s$ & Largo de las tareas pendientes por usuario. \\
+        $R_s$ & Tiempo restante antes de que cada tarea falle. \\
+        $D_s$ & Distancia a los usuarios en línea de vista. \\
+        $P_s,\ L_s$ & Posición cartesiana y geográfica del satélite. \\
+        $c_s,\ e_s$ & Carga de batería y estado: cargando o descargando. \\
+        \bottomrule
+      \end{tabularx}}
+      \vspace{0.5em}
 
-\end{columns}
+      {\footnotesize
+        $U_s, T_s, R_s, D_s$: vectores de dimensión $u_s\times 1$.\\[0.25em]
+        $P_s=(x_s,y_s,z_s)$;\quad
+        $L_s=(\mathrm{lat}_s,\mathrm{lon}_s,h_s)$.\par}
+    \column{0.31\textwidth}
+      \figurapendiente{Observaciones por satélite}
+  \end{columns}
+\end{frame}
 
+\begin{frame}{Recompensa, estado y política: decisión y evaluación}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \column{0.65\textwidth}
+      \begin{block}{Política de decisión $Y$}
+        Vector de dimensión $S\times 1$, con una decisión por satélite:
+        \[
+          Y=(y_1,\ldots,y_S)^{\mathsf{T}},\qquad y_s\in\{0,1\}.
+        \]
+        \textbf{1:} activar el procesamiento.\quad
+        \textbf{0:} desactivarlo.
+      \end{block}
+      \vspace{0.4em}
+      \begin{block}{Recompensa $r$}
+        Suma las tareas completadas exitosamente y resta las fallidas:
+        \[
+          r=N_{\text{exitosas}}-N_{\text{fallidas}}.
+        \]
+      \end{block}
+      \vspace{0.3em}
+      $S$ es el número de satélites de la constelación.
+    \column{0.31\textwidth}
+      \figurapendiente{Decisiones y resultados de las tareas}
+  \end{columns}
+\end{frame}
+
+\section{Entrenamiento}
+\begin{frame}{Entrenamiento: episodios e interacción}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \column{0.65\textwidth}
+      \begin{projectpoints}
+        \item El entrenamiento se organiza en \textbf{episodios de duración $T$},
+          compuestos por sucesivos pasos $\delta t$.
+        \item La constelación mantiene fijo su número de satélites $S$
+          durante cada episodio.
+        \item Los usuarios y las tareas pueden aparecer o desaparecer;
+          las tareas pueden tener distintos largos.
+      \end{projectpoints}
+      \vspace{0.4em}
+      \begin{block}{En cada instante $t$}
+        Observar las variables del ambiente, elegir la política $Y$,
+        aplicarla a los satélites y evaluar el resultado con la recompensa $r$.
+      \end{block}
+    \column{0.31\textwidth}
+      \figurapendiente{Interacción entre modelo y ambiente}
+  \end{columns}
 \end{frame}
 
 
