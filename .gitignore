@@ -1,0 +1,11 @@
+.DS_Store
+.idea/
+.vscode/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.log
+.env
+/outputs/
+/results/

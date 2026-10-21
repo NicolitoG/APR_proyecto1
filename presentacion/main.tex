@@ -136,7 +136,7 @@
       \textbf{Ambiente de aprendizaje}
       \begin{projectpoints}
         \item Implementación en \textbf{Python} con \textbf{Gymnasium}.
-        \item Datos del ambiente disponibles en cada paso $\delta t$.
+        \item Datos del ambiente disponibles en cada paso $\Delta t$.
         \item Decisión: activar o desactivar el procesamiento en los satélites.
       \end{projectpoints}
   \end{columns}
@@ -163,8 +163,8 @@
              \textbf{Segmento terrestre}
           \begin{itemize}
             \setlength\itemsep{0.25em}
-            \item Los usuarios generan tareas aleatoriamente; una nueva solo cuando la anterior se completa o falla.
-            \item \textbf{Éxito:} cargar la tarea al \textbf{satélite activo más cercano} en línea de vista. \textbf{Fallo:} transcurren $R_T$ segundos sin completarse.
+            \item Los usuarios generan tareas $\tau$ aleatoriamente; una nueva solo cuando la anterior se completa o falla.
+            \item \textbf{Éxito:} subir la tarea al \textbf{satélite activo más cercano} en línea de vista. \textbf{Fallo:} transcurren $R_{\tau}$ segundos sin completarse.
           \end{itemize}
 
   \end{columns}
@@ -176,22 +176,25 @@
 \begin{frame}{Restricciones: batería y disponibilidad}
   \small
   \begin{columns}[T,onlytextwidth]
-    \column{0.65\textwidth}
+    \column{0.50\textwidth}
       \begin{projectpoints}
-        \item \textbf{Día orbital:} la batería se carga mediante paneles
-          solares cuando el satélite recibe luz del Sol.
-        \item \textbf{Noche orbital:} se descarga cuando la Tierra bloquea
-          la luz solar. El ciclo orbital dura aproximadamente \textbf{90 minutos}.
-        \item \textbf{Estado activo:} la batería se descarga más rápido;
-          procesar cada tarea produce una descarga adicional.
+        \item \textbf{Día orbital:} los paneles solares cargan la batería
+          al recibir luz del Sol.
+        \item \textbf{Noche orbital:} la Tierra bloquea la luz solar y
+          la batería se descarga. Ciclos orbitales de unos \textbf{90 minutos}.
+        \item \textbf{Estado activo:} acelera la descarga;
+          procesar una tarea añade consumo.
       \end{projectpoints}
       \vspace{0.4em}
       \begin{alertblock}{Límite de batería}
-        Al alcanzar la capacidad límite, el satélite pierde la capacidad
-        de procesar tareas hasta recargarse.
+        Al alcanzar la capacidad límite, se suspende el procesamiento
+        hasta recargar la batería.
       \end{alertblock}
-    \column{0.31\textwidth}
-      \figurapendiente{Carga, descarga y ciclo orbital}
+    \column{0.47\textwidth}
+      \centering
+      \includegraphics[width=\linewidth]{images/curva_voltaje.pdf}
+      \par\vspace{0.3em}
+      {\scriptsize\color{diinfTextoSecundario}Curva esquemática de descarga.}
   \end{columns}
 \end{frame}
 
@@ -214,6 +217,7 @@
         $R_s$ & Tiempo restante antes de que cada tarea falle. \\
         $D_s$ & Distancia a los usuarios en línea de vista. \\
         $P_s,\ L_s$ & Posición cartesiana y geográfica del satélite. \\
+        $V_s$ & Vector de velocidad del satélite\\
         $c_s,\ e_s$ & Carga de batería y estado: cargando o descargando. \\
         \bottomrule
       \end{tabularx}}
@@ -235,7 +239,7 @@
       \begin{block}{Acción $A$}
         Vector de dimensión $S\times 1$, con una decisión por satélite:
         \[
-          A=(a_1,\ldots,a_S)^{\mathsf{T}},\qquad a_s\in\{0,1\}.
+          A=(a_1,\ldots,a_S),\qquad a_s\in\{0,1\}.
         \]
         \textbf{1:} activar el procesamiento.\quad
         \textbf{0:} desactivarlo.
@@ -261,7 +265,7 @@
     \column{0.65\textwidth}
       \begin{projectpoints}
         \item El entrenamiento se organiza en \textbf{episodios de duración $T$},
-          compuestos por sucesivos pasos $\delta t$.
+          compuestos por sucesivos pasos $\Delta t$.
         \item La constelación mantiene fijo su número de satélites $S$
           durante cada episodio.
         \item Los usuarios y las tareas pueden aparecer o desaparecer;
@@ -273,7 +277,9 @@
         aplicarla a los satélites y evaluar el resultado con la recompensa $r$.
       \end{block}
     \column{0.31\textwidth}
-      \figurapendiente{Interacción entre modelo y ambiente}
+         $$\mathbb{T} = \{t_0, t_1 \ldots T\}$$
+         $$t_{n+1} \leftarrow t_n + \Delta t$$
+      \diagramarl
   \end{columns}
 \end{frame}
 
