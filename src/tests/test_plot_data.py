@@ -6,13 +6,17 @@ from datetime import datetime, timedelta
 import numpy as np
 import pytest
 
+from meteogym.battery import BatteryConfig
 from meteogym.config import SimulationConfig
 from meteogym.orbits import OrbitModel
 from meteogym.plots.data import load_dataset
 
 
 def dataset_values():
-    config = SimulationConfig(satellite_ids=(541, 1), num_users=2, initial_soc=0.75)
+    config = SimulationConfig(
+        satellite_ids=(541, 1), num_users=2, initial_soc=0.75,
+        battery=BatteryConfig(voltage_empty_v=6.5, voltage_full_v=8.4),
+    )
     summary = {
         "output_schema_version": 2,
         "config": config.to_dict(),
@@ -123,6 +127,45 @@ def test_legacy_reconstruction_matches_interval_start_orbits_and_voltage(tmp_pat
     assert dataset.frame(1) is second
 
 
+def test_outcomes_accumulate_once_and_charging_describes_each_interval(tmp_path):
+    summary, rows = dataset_values()
+    rows[0].update(generated_tasks=4, completed=1, failed=2, reward=-1, charging=[0, 1])
+    rows[1].update(generated_tasks=6, completed=2, failed=0, reward=2, charging=[1, 0])
+    write_dataset(tmp_path, summary, rows)
+    dataset = load_dataset(tmp_path)
+    final = dataset.frame(-1)
+    assert (final.generated_tasks, final.completed_tasks, final.failed_tasks) == (6, 3, 2)
+    assert final.reward == 2 and final.total_reward == 1
+    assert final.charging.tolist() == [True, False]
+    assert not final.charging.flags.writeable
+    first = dataset.frame(0)
+    assert (first.generated_tasks, first.completed_tasks, first.failed_tasks) == (4, 1, 2)
+    assert first.reward == first.total_reward == -1
+    assert first.charging.tolist() == [False, True]
+    assert dataset.frame(-1).total_reward == 1
+
+
+def test_missing_historical_outcomes_remain_unknown(tmp_path):
+    summary, rows = dataset_values()
+    rows[1].update(generated_tasks=5, completed=2, failed=0, reward=None)
+    write_dataset(tmp_path, summary, rows)
+    first, second = (load_dataset(tmp_path).frame(index) for index in (0, 1))
+    assert first.generated_tasks is first.completed_tasks is first.failed_tasks is None
+    assert first.charging is None
+    assert first.total_reward == 1
+    assert second.generated_tasks == 5
+    assert second.completed_tasks is second.failed_tasks is second.total_reward is None
+
+
+def test_generated_task_total_cannot_decrease(tmp_path):
+    summary, rows = dataset_values()
+    rows[0]["generated_tasks"] = 5
+    rows[1]["generated_tasks"] = 4
+    write_dataset(tmp_path, summary, rows)
+    with pytest.raises(ValueError, match="generated_tasks cannot decrease"):
+        load_dataset(tmp_path)
+
+
 def test_legacy_presence_with_departures_requires_new_run(tmp_path):
     summary, rows = legacy_values()
     summary["config"]["user_departure_rate_per_minute"] = 0.2
@@ -154,6 +197,12 @@ def test_legacy_missing_tle_has_actionable_error(tmp_path):
         ("battery_voltage_v", [7, -1], "positive"),
         ("start_s", -1, "times must satisfy"),
         ("step", True, "step must be"),
+        ("generated_tasks", -1, "generated_tasks.*nonnegative integer"),
+        ("completed", 1.5, "completed.*nonnegative integer"),
+        ("failed", True, "failed.*nonnegative integer"),
+        ("reward", True, "reward.*finite number"),
+        ("charging", [1], "charging.*shape"),
+        ("charging", [1, 2], "charging.*binary"),
     ],
 )
 def test_malformed_frame_rejected(tmp_path, field, value, match):

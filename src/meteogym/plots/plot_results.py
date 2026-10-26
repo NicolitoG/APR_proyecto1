@@ -84,7 +84,7 @@ class MapPlayback:
         self.animation = None
         self.paused = False
         self._next_index = frame
-        self.figure, self.ax = plt.subplots(figsize=(13.6, 7.8), layout="constrained")
+        self.figure, self.ax = plt.subplots(figsize=(13.6, 7.8))
         self.figure.set_facecolor("#ffffff")
         self.figure.canvas.manager.set_window_title("MeteoGym | orbital replay")
         self.ax.set_facecolor(OCEAN_COLOR)
@@ -194,10 +194,11 @@ class MapPlayback:
         self.update(frame)
 
     def update(self, index: int):
-        """Update artist values from one complete interval-start snapshot."""
+        """Update start-state artists and outcomes for the selected interval."""
         if not 0 <= index < len(self.dataset):
             raise IndexError("frame index is outside the saved episode")
         current = self.dataset.frame(index)
+        charging = current.charging
         self.index = index
         self.satellites.set_offsets(current.satellite_locations_deg[:, ::-1])
         self.satellites.set_array(current.voltage_v)
@@ -208,18 +209,34 @@ class MapPlayback:
             latitude, longitude = current.satellite_locations_deg[sat]
             label.xy = (longitude, latitude)
             # Keep labels within the map near its edges.
-            label.set_position((-12 if longitude >= 120 else 12, -18 if latitude > 65 else 9))
+            label.set_position((-12 if longitude >= 120 else 12, -32 if latitude > 65 else 9))
             label.set_ha("right" if longitude >= 120 else "left")
+            charge_label = (
+                ("Charging" if charging[sat] else "Not charging")
+                if (charging is not None)
+                else "Charging status unavailable"
+            )
             label.set_text(
-                f"S{self.dataset.satellite_ids[sat]} · {current.contact_count[sat]} users"
+                f"S{self.dataset.satellite_ids[sat]} · {current.contact_count[sat]} users\n"
+                f"{charge_label}"
             )
             label.set_color(ACTIVE_COLOR if current.active[sat] else INACTIVE_COLOR)
         utc = current.time_utc.strftime("%Y-%m-%d %H:%M:%S UTC")
+        totals = "  ·  ".join(
+            f"{label} {value:g}" if value is not None else f"{label} unavailable"
+            for label, value in (
+                ("generated", current.generated_tasks),
+                ("failed", current.failed_tasks),
+                ("completed", current.completed_tasks),
+                ("reward", current.total_reward),
+            )
+        )
         self.subtitle.set_text(
             f"Step {current.step}  ·  t = {current.elapsed_s:g} s  ·  {utc}\n"
             f"{np.count_nonzero(current.active)}/{len(current.active)} satellites active  ·  "
             f"{np.count_nonzero(current.user_online)}/{len(current.user_online)} users online"
-            "  ·  position, contacts and voltage at interval start"
+            "  ·  position, contacts and voltage at interval start\n"
+            f"Totals through step end: {totals}"
         )
         return (self.satellites, self.users, self.offline_users, self.subtitle, *self.labels)
 

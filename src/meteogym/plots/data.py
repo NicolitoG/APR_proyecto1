@@ -21,7 +21,11 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class ReplayFrame:
-    """State at the start of an interval and the effective mode used during it."""
+    """Start state, effective activity, and outcomes through the interval end.
+
+    Charging describes net charging over this interval; task counts and total
+    reward are cumulative through its end. Missing historical values stay None.
+    """
 
     step: int
     elapsed_s: float
@@ -32,6 +36,11 @@ class ReplayFrame:
     active: NDArray[np.bool_]
     voltage_v: NDArray[np.float64]
     reward: float | None
+    generated_tasks: int | None = None
+    completed_tasks: int | None = None
+    failed_tasks: int | None = None
+    total_reward: float | None = None
+    charging: NDArray[np.bool_] | None = None
 
     @property
     def start_s(self) -> float:
@@ -133,6 +142,12 @@ def _number(value, label: str) -> float:
     return result
 
 
+def _task_count(value, label: str) -> int | None:
+    if value is not None and (type(value) is not int or value < 0):
+        raise ValueError(f"{label} must be a nonnegative integer")
+    return value
+
+
 def _json(text: str, label: str) -> dict:
     try:
         result = json.loads(text)
@@ -198,6 +213,9 @@ def load_dataset(path: str | Path) -> ReplayDataset:
     )
     previous_end = 0.0
     previous_step = 0
+    generated_tasks = None
+    completed_tasks = failed_tasks = 0
+    total_reward = 0.0
     rows = []
     reconstruct_positions = False
     for line_number, text in enumerate(lines, start=1):
@@ -263,6 +281,28 @@ def load_dataset(path: str | Path) -> ReplayDataset:
         reward = row.get("reward")
         if reward is not None:
             reward = _number(reward, f"{context} reward")
+        total_reward = (
+            total_reward + reward if total_reward is not None and reward is not None else None
+        )
+        generated = _task_count(row.get("generated_tasks"), f"{context} generated_tasks")
+        if generated is not None and generated_tasks is not None and generated < generated_tasks:
+            raise ValueError(f"{context}: generated_tasks cannot decrease")
+        generated_tasks = generated
+        completed = _task_count(row.get("completed"), f"{context} completed")
+        failed = _task_count(row.get("failed"), f"{context} failed")
+        completed_tasks = (
+            completed_tasks + completed
+            if completed_tasks is not None and completed is not None
+            else None
+        )
+        failed_tasks = (
+            failed_tasks + failed if failed_tasks is not None and failed is not None else None
+        )
+        charging = (
+            _binary(row["charging"], len(ids), f"{context} charging")
+            if row.get("charging") is not None
+            else None
+        )
         try:
             time_utc = start + timedelta(seconds=elapsed)
         except OverflowError as exc:
@@ -282,6 +322,11 @@ def load_dataset(path: str | Path) -> ReplayDataset:
                 ),
                 voltage_v=voltage,
                 reward=reward,
+                generated_tasks=generated_tasks,
+                completed_tasks=completed_tasks,
+                failed_tasks=failed_tasks,
+                total_reward=total_reward,
+                charging=charging,
             )
         )
         previous_step, previous_end = step, end

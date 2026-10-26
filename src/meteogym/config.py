@@ -18,6 +18,7 @@ class SimulationConfig:
     user_region_deg: tuple[float, float, float, float] = (-90.0, 90.0, -180.0, 180.0)
     user_locations_deg: tuple[tuple[float, float], ...] | None = None
     task_rate_per_minute: tuple[float, float] = (1.0, 3.0)
+    task_arrival_mode: str = "single"
     task_size_mb: tuple[float, float] = (0.1, 2.0)
     task_deadline_s: tuple[float, float] = (60.0, 180.0)
     initial_tasks: bool = False
@@ -40,6 +41,8 @@ class SimulationConfig:
             object.__setattr__(self, "satellite_ids", ids)
         if type(self.num_users) is not int or self.num_users < 1:
             raise ValueError("num_users must be a positive integer")
+        if self.task_arrival_mode not in ("single", "queued"):
+            raise ValueError("task_arrival_mode must be 'single' or 'queued'")
         for name in ("duration_s", "step_s", "uplink_mbps"):
             if not math.isfinite(getattr(self, name)) or getattr(self, name) <= 0:
                 raise ValueError(f"{name} must be finite and positive")

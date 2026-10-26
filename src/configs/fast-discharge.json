@@ -1,0 +1,16 @@
+{
+  "satellite_ids": [1, 151, 301, 451, 601, 751, 901, 9, 159, 309, 459, 609, 759, 909],
+  "num_users": 30,
+  "task_rate_per_minute": [3.0, 3.0],
+  "task_size_mb": [0.5, 0.5],
+  "task_deadline_s": [2000.0, 2000.0],
+  "initial_tasks": false,
+  "task_energy_j_per_mb": 4.0,
+  "step_s": 10,
+  "task_arrival_mode": "single",
+  "duration_s" : 10000,
+    "battery": {
+    "active_current_a": 4.0,
+    "max_discharge_current_a": 5
+  }
+}

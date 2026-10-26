@@ -57,6 +57,10 @@ def _add_simulation_arguments(parser: argparse.ArgumentParser) -> None:
         help="Task size range, decimal MB",
     )
     parser.add_argument(
+        "--task-arrival-mode", choices=("single", "queued"),
+        help="single waits for completion/failure; queued accumulates independent arrivals",
+    )
+    parser.add_argument(
         "--deadline",
         nargs=2,
         type=float,
@@ -71,6 +75,10 @@ def _add_simulation_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--min-elevation", type=float, help="Minimum ground elevation, degrees")
     parser.add_argument("--uplink-mbps", type=float, help="Total upload bandwidth per satellite")
     parser.add_argument("--initial-soc", type=float, help="Initial battery charge fraction [0, 1]")
+    parser.add_argument(
+        "--minimum-voltage", type=float,
+        help="Queued-mode terminal voltage cutoff, V (default: battery empty voltage)",
+    )
     parser.add_argument(
         "--initial-tasks",
         action=argparse.BooleanOptionalAction,
@@ -159,6 +167,7 @@ def _configuration(args: argparse.Namespace) -> SimulationConfig:
         "user_region": "user_region_deg",
         "task_rate": "task_rate_per_minute",
         "task_size": "task_size_mb",
+        "task_arrival_mode": "task_arrival_mode",
         "deadline": "task_deadline_s",
         "duration": "duration_s",
         "step": "step_s",
@@ -173,6 +182,8 @@ def _configuration(args: argparse.Namespace) -> SimulationConfig:
         value = getattr(args, argument)
         if value is not None:
             values[field] = value
+    if args.minimum_voltage is not None:
+        values["battery"] = {**values.get("battery", {}), "minimum_voltage_v": args.minimum_voltage}
     if args.all_satellites:
         values["satellite_ids"] = None
     elif args.satellites is not None:
@@ -237,6 +248,7 @@ def _run(args: argparse.Namespace, config: SimulationConfig) -> None:
                     "step_s": info["step_s"],
                     "actions": action.tolist(),
                     "effective_active": info["effective_active"].astype(int).tolist(),
+                    "active_duration_s": info["active_duration_s"].tolist(),
                     "sunlit": sunlit,
                     "contact_count": contact_count,
                     "satellite_geographic_deg_km": satellite_geographic,
@@ -247,6 +259,10 @@ def _run(args: argparse.Namespace, config: SimulationConfig) -> None:
                     "failed": info["failed_this_step"],
                     "generated_tasks": info["generated_tasks"],
                     "pending_tasks": info["pending_tasks"],
+                    "pending_tasks_per_user": info["pending_tasks_per_user"].tolist(),
+                    "task_events": info["task_events"],
+                    "battery_failure_events": info["battery_failure_events"],
+                    "battery_suspended": observation["battery_suspended"].tolist(),
                     "battery_soc": observation["battery_soc"].tolist(),
                     "battery_voltage_v": observation["battery_voltage_v"].tolist(),
                     "battery_current_a": observation["battery_current_a"].tolist(),

@@ -1,5 +1,6 @@
 """Map artists, keyboard navigation and portable static/animated exports."""
 
+import json
 from types import SimpleNamespace
 
 import numpy as np
@@ -94,6 +95,47 @@ def test_enter_previous_and_end_navigation_stop_at_bounds(dataset_dir):
         ):
             viewer._on_key(SimpleNamespace(key=key))
             assert viewer.index == expected
+    finally:
+        plt.close(viewer.figure)
+
+
+def test_direct_playback_displays_cumulative_outcomes_and_charging(dataset_dir):
+    path = dataset_dir / "steps.jsonl"
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    rows[0].update(generated_tasks=4, completed=1, failed=2, reward=-1, charging=[1, 0])
+    rows[1].update(generated_tasks=6, completed=2, failed=0, reward=2, charging=[0, 1])
+    rows[2].update(generated_tasks=8, completed=0, failed=1, reward=-1, charging=[0, 1])
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    viewer = MapPlayback(load_dataset(dataset_dir))
+    try:
+        for index, totals, charges in (
+            (2, (8, 3, 3, 0), (False, True)),
+            (0, (4, 2, 1, -1), (True, False)),
+            (1, (6, 2, 3, 1), (False, True)),
+        ):
+            viewer.update(index)
+            for name, value in zip(("generated", "failed", "completed", "reward"), totals):
+                assert f"{name} {value}" in viewer.subtitle.get_text()
+            for label, charging in zip(viewer.labels, charges):
+                assert label.get_text().splitlines()[-1] == (
+                    "Charging" if charging else "Not charging"
+                )
+    finally:
+        plt.close(viewer.figure)
+
+
+def test_missing_historical_totals_and_charging_display_unavailable(dataset_dir):
+    path = dataset_dir / "steps.jsonl"
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    for row in rows:
+        for key in ("generated_tasks", "completed", "failed", "reward", "charging"):
+            row.pop(key, None)
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    viewer = MapPlayback(load_dataset(dataset_dir))
+    try:
+        assert "generated unavailable" in viewer.subtitle.get_text()
+        assert "reward unavailable" in viewer.subtitle.get_text()
+        assert all("Charging status unavailable" in label.get_text() for label in viewer.labels)
     finally:
         plt.close(viewer.figure)
 

@@ -17,21 +17,24 @@ from numpy.typing import ArrayLike, NDArray
 class BatteryConfig:
     """Pack-level values; active current includes the passive bus load."""
 
-    capacity_ah: float = 0.5
-    voltage_empty_v: float = 6.5
+    capacity_ah: float = 2.6
+    voltage_empty_v: float = 5.5
     voltage_full_v: float = 8.4
     internal_resistance_ohm: float = 0.14
     passive_current_a: float = 0.12
-    active_current_a: float = 2.0
+    active_current_a: float = 0.45
     solar_current_a: float = 0.65
     max_discharge_current_a: float = 2.5
     charge_efficiency: float = 0.95
     cutoff_soc: float = 0.20
     resume_soc: float = 0.30
+    minimum_voltage_v: float | None = None
 
     def __post_init__(self) -> None:
         for field in fields(self):
             value = getattr(self, field.name)
+            if field.name == "minimum_voltage_v" and value is None:
+                continue
             if isinstance(value, (bool, str)) or not np.isfinite(value):
                 raise ValueError(f"{field.name} must be a finite number")
         if self.capacity_ah <= 0:
@@ -56,10 +59,17 @@ class BatteryConfig:
             raise ValueError("charge_efficiency must be in (0, 1]")
         if not 0 <= self.cutoff_soc < self.resume_soc <= 1:
             raise ValueError("SoC thresholds must satisfy 0 <= cutoff < resume <= 1")
+        if not 0 < self.effective_minimum_voltage_v <= self.voltage_full_v:
+            raise ValueError("minimum_voltage_v must be positive and no greater than full voltage")
 
     @property
     def capacity_coulomb(self) -> float:
         return self.capacity_ah * 3600.0
+
+    @property
+    def effective_minimum_voltage_v(self) -> float:
+        """Loaded-voltage cutoff for queued transfers; defaults to empty voltage."""
+        return self.voltage_empty_v if self.minimum_voltage_v is None else self.minimum_voltage_v
 
 
 @dataclass(frozen=True)
@@ -78,6 +88,16 @@ class BatteryStep:
     voltage_v: NDArray[np.float64]
     current_a: NDArray[np.float64]
     task_energy_j: NDArray[np.float64]
+
+
+@dataclass(frozen=True)
+class TransferStep:
+    """One scalar transfer interval, possibly ending early at a voltage cutoff."""
+
+    duration_s: float
+    task_energy_j: float
+    active: bool
+    failed: bool
 
 
 class BatteryPack:
@@ -252,3 +272,112 @@ class BatteryPack:
             current_a=self.current_a.copy(),
             task_energy_j=energy.copy(),
         )
+
+    def advance_transfer(
+        self,
+        dt_s: float,
+        sunlit: bool,
+        requested_active: bool,
+        task_power_w: float,
+    ) -> TransferStep:
+        """Advance a single pack until the requested end or its loaded-voltage cutoff.
+
+        Queued transfers bypass the legacy SoC reserve and lockout: the caller
+        controls suspension and recovery after ``failed``. The requested task
+        power is represented by a constant extra current whose integrated work
+        matches that power over the actual interval, including early cutoff.
+        A hardware current cap (and the monotone branch of the work/current
+        relation) can throttle it.
+        If cutoff occurs first, only work up to that instant is delivered.
+
+        Terminal voltage includes the instantaneous resistive sag, so a newly
+        applied load can fail at time zero. Complete depletion also stops work
+        when a custom cutoff lies below the model's loaded empty voltage.
+        Passive intervals always run to their end without reporting failure.
+        """
+        if self.count != 1:
+            raise ValueError("advance_transfer requires a single battery pack")
+        self._validate_dt(dt_s)
+        sun = bool(self._flags(sunlit, "sunlit")[0])
+        active = bool(self._flags(requested_active, "requested_active")[0])
+        if (
+            isinstance(task_power_w, (bool, str))
+            or not np.isfinite(task_power_w)
+            or task_power_w < 0
+        ):
+            raise ValueError("task_power_w must be finite and nonnegative")
+        if not active:
+            if task_power_w > 0:
+                raise ValueError("task power must be zero when processing is passive")
+            self.advance(dt_s, sun, False)
+            return TransferStep(float(dt_s), 0.0, False, False)
+
+        c = self.config
+        baseline = np.array([c.active_current_a - sun * c.solar_current_a])
+        slope = c.voltage_full_v - c.voltage_empty_v
+        # Unlike task_energy_budget_j, do not reserve charge above cutoff_soc.
+        # This conservative derivative bound keeps bisection on the increasing
+        # work/current branch even across capacity saturation or large steps.
+        sag_slope = c.internal_resistance_ohm + slope * dt_s / (2 * c.capacity_coulomb)
+        min_voltage = c.voltage_empty_v - c.internal_resistance_ohm * c.max_discharge_current_a
+        limit = min(
+            max(0.0, c.max_discharge_current_a - baseline[0]),
+            min_voltage / (2 * sag_slope),
+        )
+        initial_voltage = float(self.open_circuit_voltage_v()[0])
+
+        def cutoff_time(extra_current: float) -> float:
+            net_current = baseline[0] + extra_current
+            starting_voltage = initial_voltage - net_current * c.internal_resistance_ohm
+            if starting_voltage <= c.effective_minimum_voltage_v:
+                return 0.0
+            if net_current <= 0:
+                return float("inf")
+            voltage_time = (
+                (starting_voltage - c.effective_minimum_voltage_v)
+                * c.capacity_coulomb / (slope * net_current)
+            )
+            empty_time = self.soc[0] * c.capacity_coulomb / net_current
+            return float(min(voltage_time, empty_time))
+
+        def mean_task_power(extra_current: float) -> float:
+            duration = min(dt_s, cutoff_time(extra_current))
+            if duration == 0:
+                # Use the instantaneous limit to solve a load that causes an
+                # immediate sag; that failed interval still delivers no work.
+                voltage = initial_voltage - (baseline[0] + extra_current) * (
+                    c.internal_resistance_ohm
+                )
+                return extra_current * voltage
+            work = self._task_energy(duration, baseline, np.array([extra_current]))[0]
+            return float(work / duration)
+
+        low, high = 0.0, limit
+        if task_power_w > 0:
+            target_power = min(float(task_power_w), mean_task_power(high))
+            # Couple the cutoff time to each candidate current. Solving over
+            # the original interval would overdeliver power before early cutoff.
+            for _ in range(48):
+                middle = (low + high) * 0.5
+                if mean_task_power(middle) <= target_power:
+                    low = middle
+                else:
+                    high = middle
+        task_current = np.array([low])
+        current = baseline + task_current
+        failure_time = cutoff_time(low)
+        failed = failure_time <= dt_s
+        duration = float(min(dt_s, failure_time))
+        old_soc = self.soc.copy()
+        if duration > 0:
+            energy = float(self._task_energy(duration, baseline, task_current)[0])
+            self.soc, _, self.current_a = self._trajectory(duration, current)
+        else:
+            energy = 0.0
+            # A zero-duration sag consumes no charge, but exposes its voltage.
+            self.current_a = current.copy()
+        self.charging = self.soc > old_soc
+        self.voltage_v = self.open_circuit_voltage_v() - self.current_a * c.internal_resistance_ohm
+        self.locked_out |= self.soc <= c.cutoff_soc + 1e-12
+        self.locked_out &= self.soc < c.resume_soc
+        return TransferStep(duration, energy, True, bool(failed))

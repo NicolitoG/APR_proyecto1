@@ -1,0 +1,7 @@
+
+# Install the package itself with: python -m pip install ./src
+# Optional plotting/development dependencies are provided by its plot/dev extras.
+numpy>=2.0,<3
+gymnasium>=1.0,<2
+sgp4>=2.24,<3
+astropy>=7,<9
