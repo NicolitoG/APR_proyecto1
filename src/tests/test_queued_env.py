@@ -120,11 +120,15 @@ def test_expired_new_arrivals_are_counted_before_departure():
     assert_conserved(info)
 
 
-def test_voltage_failure_keeps_completed_tasks_and_recovers_for_new_batch():
+@pytest.mark.parametrize("resume_voltage, charging_steps", [(5.5, 2), (8.4, 4)])
+def test_voltage_failure_keeps_completed_tasks_and_recovers_for_new_batch(
+    resume_voltage, charging_steps,
+):
     battery = BatteryConfig(
         voltage_empty_v=6.5, voltage_full_v=8.4,
         capacity_ah=0.001, active_current_a=0, passive_current_a=0,
         internal_resistance_ohm=0, minimum_voltage_v=7.4, resume_soc=0.7,
+        resume_voltage_v=resume_voltage,
     )
     env = queued_env(initial_soc=0.5, battery=battery)
     env.reset(seed=1)
@@ -145,11 +149,12 @@ def test_voltage_failure_keeps_completed_tasks_and_recovers_for_new_batch():
     new_task = enqueue(env, 0, 0.1)
     env.orbits.sunlit[:] = True
     env._refresh_geometry()
-    obs, reward, _, _, info = env.step([1, 0])
-    assert reward == 0 and obs["battery_suspended"][0]
-    assert env.workload.tasks[0] is new_task
-    obs, reward, _, _, info = env.step([1, 0])
-    assert reward == 0 and obs["available"][0]
+    for step in range(charging_steps):
+        obs, reward, _, _, info = env.step([1, 0])
+        assert reward == 0 and env.workload.tasks[0] is new_task
+        assert not info["active_duration_s"][0]
+        assert bool(obs["available"][0]) == (step == charging_steps - 1)
+    assert env.battery.open_circuit_voltage_v()[0] >= resume_voltage
     obs, reward, _, _, info = env.step([1, 0])
     assert reward == 1 and not obs["battery_suspended"][0]
     assert [event["task_id"] for event in info["task_events"]] == [new_task.task_id]

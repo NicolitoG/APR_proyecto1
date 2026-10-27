@@ -374,8 +374,11 @@ class MeteoGymEnv(gym.Env):
         self.battery.charging = self.charging.copy()
         self.active = active_duration > 0
         # A recovered pack may process again only at the next decision boundary.
-        recovered = (self.battery.soc >= self.voltage_recovery_soc) & (
-            self.battery.open_circuit_voltage_v() > self.config.battery.effective_minimum_voltage_v
+        open_circuit_voltage = self.battery.open_circuit_voltage_v()
+        recovered = (
+            (self.battery.soc >= self.voltage_recovery_soc)
+            & (open_circuit_voltage > self.config.battery.effective_minimum_voltage_v)
+            & (open_circuit_voltage >= self.config.battery.resume_voltage_v)
         )
         self.voltage_suspended &= ~recovered
         self.battery.locked_out = self.voltage_suspended.copy()

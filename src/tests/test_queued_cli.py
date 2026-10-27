@@ -19,7 +19,7 @@ def test_queued_cli_records_failed_batch_and_voltage_suspension(tmp_path):
         "task_rate_per_minute": [0, 0], "task_size_mb": [1, 1], "uplink_mbps": 8,
         "battery": {"capacity_ah": 0.1, "active_current_a": 0,
                     "voltage_empty_v": 6.5, "voltage_full_v": 8.4,
-                    "passive_current_a": 0, "solar_current_a": 0},
+                    "passive_current_a": 0, "solar_current_a": 0, "resume_voltage_v": 7.8},
     }))
     output = tmp_path / "run"
     assert main([
@@ -30,6 +30,7 @@ def test_queued_cli_records_failed_batch_and_voltage_suspension(tmp_path):
     rows = [json.loads(line) for line in (output / "steps.jsonl").read_text().splitlines()]
     assert summary["config"]["task_arrival_mode"] == "queued"
     assert summary["config"]["battery"]["minimum_voltage_v"] == 7.44
+    assert summary["config"]["battery"]["resume_voltage_v"] == 7.8
     assert summary["config"]["battery"]["capacity_ah"] == 0.1
     assert summary["results"]["failed_tasks"] == 1
     assert summary["results"]["pending_tasks"] == 0

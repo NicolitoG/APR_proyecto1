@@ -37,6 +37,7 @@ Both sets of values are adjustable simulation parameters rather than measured sp
 | `charge_efficiency` | 0.95 | Assumed charge-storage efficiency |
 | `cutoff_soc` / `resume_soc` | 0.20 / 0.30 | Single-mode SoC cutoff and recharge recovery threshold |
 | `minimum_voltage_v` | `None` → 5.5 V | Queued-mode loaded terminal cutoff; `None` uses `voltage_empty_v` |
+| `resume_voltage_v` | 5.5 V | Minimum open-circuit voltage for recovery after discharge, in addition to the SoC requirement |
 
 Active current already includes housekeeping.
 Solar current represents generation after panel, attitude, and regulator effects have been summarized into one constant parameter.
@@ -96,7 +97,7 @@ Budgets for passive, locked-out, or unaffordable satellites are zero.
 
 `advance` rejects task work beyond this budget without modifying the battery.
 The environment must limit transferred bytes before marking tasks complete.
-Reaching the cutoff locks out processing; it resumes only after SoC reaches `resume_soc`, starting on the following step.
+Reaching the cutoff locks out processing; it resumes only after SoC reaches `resume_soc` and open-circuit voltage reaches `resume_voltage_v`, starting on the following step.
 Passive charging continues while processing is locked out.
 
 ```python
@@ -136,12 +137,13 @@ The conservative `cutoff_soc` work reservation used in single mode does not appl
 If the loaded terminal voltage reaches `minimum_voltage_v`, every unfinished task assigned to that satellite fails with `battery_cutoff` and is discarded.
 Tasks already completed remain successful.
 Voltage sag can trigger this cutoff while stored charge remains above the single-mode SoC cutoff.
-The satellite switches to passive mode for the remainder of the step and remains suspended until it actually recharges after the failure, reaches at least `resume_soc`, and has open-circuit voltage above the threshold.
+The satellite switches to passive mode for the remainder of the step and remains suspended until it actually recharges after the failure, reaches at least `resume_soc`, and has open-circuit voltage above the cutoff and at least `resume_voltage_v`.
 Recovery permits new batches starting at the next decision boundary; failed batches are never retried.
 Removing task load alone does not count as recharge.
 
 `minimum_voltage_v=None` uses `voltage_empty_v` as the loaded terminal threshold.
 Configure it through `BatteryConfig(minimum_voltage_v=...)`, the corresponding nested JSON battery field, or the CLI option `--minimum-voltage`.
+Set the independent recovery threshold through `BatteryConfig(resume_voltage_v=...)` or the JSON battery field `resume_voltage_v`; its default is 5.5 V and it must be positive and no greater than `voltage_full_v`.
 The environment reports `battery_failure_events` with satellite IDs, event times and failure voltages, plus each satellite's `active_duration_s`.
 An effective-active flag means processing was enabled for some portion of the step, while `battery_suspended` describes the state at the ending boundary.
 Reported current is averaged over the entire step, and `charging` means the ending stored charge exceeds the starting charge.

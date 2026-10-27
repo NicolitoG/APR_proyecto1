@@ -105,6 +105,28 @@ def test_new_dataset_uses_exact_start_states_and_effective_mode_without_tle(tmp_
     assert not first.voltage_v.flags.writeable
 
 
+def test_suspension_uses_previous_interval_end(tmp_path):
+    summary, rows = dataset_values()
+    rows[0]["battery_suspended"] = [1, 0]
+    rows[1]["battery_suspended"] = [0, 1]
+    write_dataset(tmp_path, summary, rows)
+    dataset = load_dataset(tmp_path)
+    assert dataset.frame(1).battery_suspended.tolist() == [True, False]
+    assert dataset.frame(0).battery_suspended.tolist() == [False, False]
+    assert not dataset.frame(1).battery_suspended.flags.writeable
+
+
+@pytest.mark.parametrize("mode", ["single", "queued"])
+def test_initial_suspension_matches_config_and_missing_history_is_unknown(tmp_path, mode):
+    summary, rows = dataset_values()
+    summary["config"].update(initial_soc=0.1, task_arrival_mode=mode)
+    summary["config"]["battery"]["minimum_voltage_v"] = 7.0
+    write_dataset(tmp_path, summary, rows)
+    dataset = load_dataset(tmp_path)
+    assert dataset.frame(0).battery_suspended.tolist() == [True, True]
+    assert dataset.frame(1).battery_suspended is None
+
+
 def test_legacy_reconstruction_matches_interval_start_orbits_and_voltage(tmp_path):
     summary, rows = legacy_values()
     write_dataset(tmp_path, summary, rows)

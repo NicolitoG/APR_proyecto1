@@ -111,6 +111,22 @@ def test_hysteresis_requires_recharge_to_resume():
     assert battery.available(True)[0]
 
 
+def test_recovery_requires_voltage_as_well_as_soc():
+    c = BatteryConfig(capacity_ah=0.01, resume_voltage_v=8.4)
+    battery = BatteryPack(c, 1, 0.19)
+    battery.advance(8.0, True, True)
+    assert battery.soc[0] >= c.resume_soc
+    assert battery.open_circuit_voltage_v()[0] < c.resume_voltage_v
+    assert not battery.available(True)[0]
+    battery.advance(100.0, True, True)
+    assert battery.open_circuit_voltage_v()[0] == c.resume_voltage_v
+    assert battery.available(True)[0]
+    # The recovery threshold does not suspend a healthy pack on subsequent discharge.
+    battery.advance(4.0, False, True)
+    assert battery.open_circuit_voltage_v()[0] < c.resume_voltage_v
+    assert battery.available(True)[0]
+
+
 def test_overbudget_rejected_without_mutation():
     battery = BatteryPack(BatteryConfig(), 1, 0.21)
     budget = battery.task_energy_budget_j(60.0, False, True)
@@ -161,6 +177,13 @@ def test_snapshot_is_independent_of_subsequent_steps():
         {"voltage_empty_v": 9},
         {"internal_resistance_ohm": 100},
         {"capacity_ah": float("nan")},
+        {"resume_voltage_v": 0},
+        {"resume_voltage_v": -1},
+        {"resume_voltage_v": 8.5},
+        {"resume_voltage_v": float("nan")},
+        {"resume_voltage_v": float("inf")},
+        {"resume_voltage_v": True},
+        {"resume_voltage_v": "5.5"},
     ],
 )
 def test_invalid_configuration(kwargs):

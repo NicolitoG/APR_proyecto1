@@ -28,11 +28,12 @@ from .data import ReplayDataset, load_dataset
 
 ACTIVE_COLOR = "#167341"
 INACTIVE_COLOR = "#c23736"
+DISCHARGED_COLOR = "#808080"
 USER_COLOR = "#394957"
 OCEAN_COLOR = "#edf4f8"
 VOLTAGE_CMAP = LinearSegmentedColormap.from_list(
     "meteogym_voltage", ["#d93d43", "#ad6eac", "#2467c7"]
-)
+).with_extremes(bad=DISCHARGED_COLOR)
 
 
 def _land_background(ax):
@@ -118,6 +119,7 @@ class MapPlayback:
             c=initial.voltage_v,
             cmap=VOLTAGE_CMAP,
             norm=Normalize(*dataset.voltage_limits, clip=True),
+            plotnonfinite=True,
             edgecolors="#ffffff",
             linewidths=1.6,
             zorder=5,
@@ -157,7 +159,7 @@ class MapPlayback:
         colorbar = self.figure.colorbar(
             self.satellites, ax=self.ax, fraction=0.025, pad=0.025, shrink=0.8, extend="both"
         )
-        colorbar.set_label("Battery voltage (V) · red: empty / blue: full", fontsize=9)
+        colorbar.set_label("Battery voltage (V) · red: low / blue: full", fontsize=9)
         colorbar.ax.tick_params(labelsize=9)
         self.ax.legend(
             handles=[
@@ -181,10 +183,14 @@ class MapPlayback:
                 ),
                 Line2D([], [], color=ACTIVE_COLOR, linewidth=3, label="Active label"),
                 Line2D([], [], color=INACTIVE_COLOR, linewidth=3, label="Inactive label"),
+                Line2D(
+                    [], [], marker="o", linestyle="none", color=DISCHARGED_COLOR,
+                    markersize=8, label="Discharged battery",
+                ),
             ],
             loc="upper center",
             bbox_to_anchor=(0.5, -0.14),
-            ncols=4,
+            ncols=5,
             frameon=False,
             fontsize=9,
             handlelength=1.2,
@@ -201,7 +207,11 @@ class MapPlayback:
         charging = current.charging
         self.index = index
         self.satellites.set_offsets(current.satellite_locations_deg[:, ::-1])
-        self.satellites.set_array(current.voltage_v)
+        suspended = current.battery_suspended
+        if suspended is None:
+            # Older runs may omit suspension; only empty voltage is then observable.
+            suspended = current.voltage_v <= self.dataset.voltage_limits[0]
+        self.satellites.set_array(np.ma.masked_where(suspended, current.voltage_v))
         users = self.dataset.user_locations_deg
         self.users.set_offsets(users[current.user_online, ::-1])
         self.offline_users.set_offsets(users[~current.user_online, ::-1])

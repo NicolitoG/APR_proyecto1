@@ -66,3 +66,5 @@ python -m  meteogym.plots.plot_results ./outputs/run --mode step
 Add `--plot` or `--plot step` to `meteogym run` to open the viewer after the simulation finishes.
 Interactive plotting requires access to a graphical desktop session.
 See [interactive plotting setup](src/README.md#check-interactive-plotting) if Matplotlib selects a backend that cannot open windows.
+
+![til](./src/docs/map.gif)

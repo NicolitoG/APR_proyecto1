@@ -18,6 +18,7 @@ from meteogym.cli import main as run_cli  # noqa: E402
 from meteogym.plots.data import load_dataset  # noqa: E402
 from meteogym.plots.plot_results import (  # noqa: E402
     ACTIVE_COLOR,
+    DISCHARGED_COLOR,
     INACTIVE_COLOR,
     MapPlayback,
     main,
@@ -77,6 +78,50 @@ def test_map_marker_positions_voltage_and_labels_follow_frame(dataset_dir):
         assert viewer.satellites.norm.vmin == data.voltage_limits[0]
         assert viewer.satellites.norm.vmax == data.voltage_limits[1]
         assert len(viewer.ax.patches) > 100  # Actual offline land polygons, not an empty grid.
+    finally:
+        plt.close(viewer.figure)
+
+
+def test_discharged_marker_stays_visible_and_recovers_voltage_color(dataset_dir):
+    path = dataset_dir / "steps.jsonl"
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    rows[0]["battery_suspended"] = [1, 0]
+    rows[1]["battery_suspended"] = [0, 0]
+    rows[1]["effective_active"] = [0, 0]
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    data = load_dataset(dataset_dir)
+    viewer = MapPlayback(data, frame=1)
+    try:
+        for index in (1, 2, 1, 0):
+            viewer.update(index)
+            viewer.figure.canvas.draw()
+            frame = data.frame(index)
+            colors = viewer.satellites.cmap(viewer.satellites.norm(frame.voltage_v))
+            if index == 1:
+                assert frame.voltage_v[0] > data.voltage_limits[0]
+                colors[0] = to_rgba(DISCHARGED_COLOR)
+            np.testing.assert_allclose(viewer.satellites.get_facecolors(), colors)
+            assert not np.ma.getmaskarray(viewer.satellites.get_offsets()).any()
+        assert "Discharged battery" in [t.get_text() for t in viewer.ax.get_legend().get_texts()]
+    finally:
+        plt.close(viewer.figure)
+
+
+def test_legacy_missing_suspension_uses_empty_voltage_for_gray_marker(dataset_dir):
+    path = dataset_dir / "steps.jsonl"
+    data = load_dataset(dataset_dir)
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    for row in rows:
+        row.pop("battery_suspended", None)
+    rows[1]["battery_voltage_start_v"] = list(data.voltage_limits)
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    viewer = MapPlayback(load_dataset(dataset_dir), frame=1)
+    try:
+        assert viewer.dataset.frame(1).battery_suspended is None
+        viewer.figure.canvas.draw()
+        colors = viewer.satellites.get_facecolors()
+        np.testing.assert_allclose(colors[0], to_rgba(DISCHARGED_COLOR))
+        np.testing.assert_allclose(colors[1], viewer.satellites.cmap(1.0))
     finally:
         plt.close(viewer.figure)
 

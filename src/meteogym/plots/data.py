@@ -41,6 +41,7 @@ class ReplayFrame:
     failed_tasks: int | None = None
     total_reward: float | None = None
     charging: NDArray[np.bool_] | None = None
+    battery_suspended: NDArray[np.bool_] | None = None
 
     @property
     def start_s(self) -> float:
@@ -211,6 +212,13 @@ def load_dataset(path: str | Path) -> ReplayDataset:
     previous_voltage = np.full(
         len(ids), voltage_limits[0] + config.initial_soc * (voltage_limits[1] - voltage_limits[0])
     )
+    previous_suspended = _binary(
+        previous_voltage <= config.battery.effective_minimum_voltage_v
+        if config.task_arrival_mode == "queued"
+        else np.full(len(ids), config.initial_soc <= config.battery.cutoff_soc),
+        len(ids),
+        "initial battery_suspended",
+    )
     previous_end = 0.0
     previous_step = 0
     generated_tasks = None
@@ -327,7 +335,14 @@ def load_dataset(path: str | Path) -> ReplayDataset:
                 failed_tasks=failed_tasks,
                 total_reward=total_reward,
                 charging=charging,
+                battery_suspended=previous_suspended,
             )
+        )
+        # Saved suspension is interval-end state; use it at the next frame's start.
+        previous_suspended = (
+            _binary(row["battery_suspended"], len(ids), f"{context} battery_suspended")
+            if row.get("battery_suspended") is not None
+            else None
         )
         previous_step, previous_end = step, end
     if not rows:

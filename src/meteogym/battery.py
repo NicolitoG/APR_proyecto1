@@ -29,6 +29,7 @@ class BatteryConfig:
     cutoff_soc: float = 0.20
     resume_soc: float = 0.30
     minimum_voltage_v: float | None = None
+    resume_voltage_v: float = 5.5
 
     def __post_init__(self) -> None:
         for field in fields(self):
@@ -61,6 +62,8 @@ class BatteryConfig:
             raise ValueError("SoC thresholds must satisfy 0 <= cutoff < resume <= 1")
         if not 0 < self.effective_minimum_voltage_v <= self.voltage_full_v:
             raise ValueError("minimum_voltage_v must be positive and no greater than full voltage")
+        if not 0 < self.resume_voltage_v <= self.voltage_full_v:
+            raise ValueError("resume_voltage_v must be positive and no greater than full voltage")
 
     @property
     def capacity_coulomb(self) -> float:
@@ -263,7 +266,9 @@ class BatteryPack:
             self.current_a * c.internal_resistance_ohm
         )
         self.locked_out |= self.soc <= c.cutoff_soc + 1e-12
-        self.locked_out &= self.soc < c.resume_soc
+        self.locked_out &= (self.soc < c.resume_soc) | (
+            self.open_circuit_voltage_v() < c.resume_voltage_v
+        )
         return BatteryStep(
             active=active.copy(),
             charging=self.charging.copy(),
@@ -379,5 +384,7 @@ class BatteryPack:
         self.charging = self.soc > old_soc
         self.voltage_v = self.open_circuit_voltage_v() - self.current_a * c.internal_resistance_ohm
         self.locked_out |= self.soc <= c.cutoff_soc + 1e-12
-        self.locked_out &= self.soc < c.resume_soc
+        self.locked_out &= (self.soc < c.resume_soc) | (
+            self.open_circuit_voltage_v() < c.resume_voltage_v
+        )
         return TransferStep(duration, energy, True, bool(failed))
