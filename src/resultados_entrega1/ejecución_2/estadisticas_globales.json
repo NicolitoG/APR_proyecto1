@@ -1,0 +1,16 @@
+{
+  "run_folder": "ejecuci\u00f3n_2",
+  "num_episodes": 4,
+  "base_seed": 42,
+  "reward_weights": {
+    "alpha": 1.0,
+    "beta": 1.0,
+    "gamma": 1.5,
+    "delta": 0.1,
+    "epsilon": 0.7
+  },
+  "native_reward_mean": -2788.0,
+  "native_reward_std": 35.04996433664377,
+  "custom_reward_mean": -2922.7,
+  "custom_reward_std": 39.697481028397725
+}

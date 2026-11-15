@@ -1,0 +1,33 @@
+==========================================================
+ REGISTRO DE HIPERPARÁMETROS - EJECUCIÓN_2
+ Fecha de ejecución: 2026-11-15 19:54:04
+==========================================================
+
+[1. Parámetros de Evaluación]
+Agente               : RandomAgent (Distribución Uniforme)
+Número de episodios  : 4
+Semilla base (seed)  : 42
+Umbral urgencia (s)  : 30.0
+
+[2. Pesos de la Función de Recompensa Custom]
+Fórmula: R_t = alpha*N_exitosas - beta*N_fallidas_tierra - gamma*N_fallidas_sat - delta*N_descargas - epsilon*N_ocioso
+alpha (exitosas)     : 1.0
+beta (fallo tierra)  : 1.0
+gamma (fallo sat)    : 1.5
+delta (descargas)    : 0.1
+epsilon (ocioso)     : 0.7
+
+[3. Configuración del Simulador (SimulationConfig)]
+Satélites (IDs)      : (1, 2)
+Número de usuarios   : 100
+Duración episodio (s): 5400.0
+Paso de tiempo dt (s): 10.0
+Modo llegada tareas  : single
+Tasa tareas (/min)   : (1.0, 3.0)
+Tamaño tareas (MB)   : (0.1, 2.0)
+Deadline tareas (s)  : (60.0, 180.0)
+Ancho de banda (Mbps): 1.0
+Energía tarea (J/MB) : 2.0
+SoC inicial batería  : 0.8
+SoC corte / reinicio : 0.2 / 0.3
+==========================================================
