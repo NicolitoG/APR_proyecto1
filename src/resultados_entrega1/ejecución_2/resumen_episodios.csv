@@ -1,5 +1,0 @@
-episode,env_seed,agent_seed,native_total_reward,custom_total_reward,completed_tasks,failed_tasks,failed_ground,failed_satellite,discharge_steps,idle_active_steps,final_mean_soc
-1,42,1042,-2830.0,-2970.2,276,3106,3042,64,354,104,0.879469969960726
-2,43,1043,-2799.0,-2929.8,308,3107,3066,41,354,107,0.8756440375216936
-3,44,1044,-2733.0,-2860.0,325,3058,2942,116,354,48,0.8794471684679742
-4,45,1045,-2790.0,-2930.8,319,3109,3034,75,354,97,0.8721229980429588
