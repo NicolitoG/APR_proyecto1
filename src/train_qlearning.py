@@ -288,7 +288,7 @@ if __name__ == "__main__":
     
     # B. Pesos de la recompensa
     pesos_recompensa = {
-        "alpha": 1.0,
+        "alpha": 2.0,
         "beta": 1.0,
         "gamma": 1.5,
         "delta": 0.1,
@@ -310,7 +310,7 @@ if __name__ == "__main__":
         config=sim_config,
         reward_weights=pesos_recompensa,
         agent_params=parametros_agente,
-        num_episodes=100,         # 400 episodios es un buen balance para empezar
+        num_episodes=20,         # 400 episodios es un buen balance para empezar
         base_seed=1000,           # Semilla base para generalizar usuarios
         congestion_threshold=2.5,
         urgency_threshold_s=30.0
