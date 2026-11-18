@@ -1,0 +1,30 @@
+==========================================================
+ REGISTRO DE ENTRENAMIENTO Q-LEARNING - QLEARNING_EJECUCIÓN_8
+ Fecha: 2026-11-18 09:35:39
+==========================================================
+
+[1. Parámetros de Q-Learning]
+Episodios de train   : 10
+Alpha (Tasa aprend.) : 0.1
+Gamma (Descuento)    : 0.95
+Epsilon inicial      : 1.0
+Epsilon mínimo       : 0.05
+Epsilon decay        : 0.99
+
+[2. Parámetros del Espacio de Estados]
+Umbral congestión    : 2.5
+Umbral urgencia (s)  : 30.0
+
+[3. Pesos de la Recompensa Custom]
+alpha                : 2.0
+beta                 : 1.0
+gamma                : 1.5
+delta                : 0.1
+epsilon              : 0.2
+
+[4. Configuración del Simulador]
+Satélites            : 4 (IDs: (401, 120, 445, 805))
+Usuarios             : 100
+Duración (s)         : 5400.0
+Semilla base         : 1000
+==========================================================

@@ -6,6 +6,8 @@ import re
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
+import random
+import gc 
 
 import gymnasium as gym
 import numpy as np
@@ -74,7 +76,7 @@ def save_training_hyperparameters(
         *[f"{k:20s} : {v}" for k, v in reward_weights.items()],
         "",
         "[4. Configuración del Simulador]",
-        f"Satélites            : {len(config.satellite_ids)}",
+        f"Satélites            : {len(config.satellite_ids)} (IDs: {config.satellite_ids})",
         f"Usuarios             : {config.num_users}",
         f"Duración (s)         : {config.duration_s}",
         f"Semilla base         : {base_seed}",
@@ -175,9 +177,28 @@ def plot_learning_curve(episodes_data: list[dict], output_dir: Path) -> None:
     plt.savefig(output_dir / "curva_entrenamiento.png", dpi=150)
     plt.close(fig)
 
+# =====================================================================
+# 4. GUARDADO DE CHECKPOINTS
+# =====================================================================
+def save_checkpoints(output_dir: Path, agent: QLearningAgent, episodes_summary: list[dict]) -> None:
+    """Sobrescribe los archivos de salida con el progreso hasta el episodio actual."""
+    # 1. Guardar tabla Q
+    agent.save(output_dir / "q_table.pkl")
+    
+    # 2. Guardar CSV de historial
+    if episodes_summary:
+        csv_path = output_dir / "historial_episodios.csv"
+        with csv_path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=list(episodes_summary[0].keys()))
+            writer.writeheader()
+            writer.writerows(episodes_summary)
+            
+    # 3. Actualizar gráficas (solo si hay más de 1 episodio para evitar warnings de matplotlib)
+    if len(episodes_summary) > 1:
+        plot_learning_curve(episodes_summary, output_dir)
 
 # =====================================================================
-# 4. ORQUESTADOR PRINCIPAL
+# 5. ORQUESTADOR PRINCIPAL
 # =====================================================================
 def train_agent(
     config: SimulationConfig,
@@ -234,6 +255,13 @@ def train_agent(
             ep_stats["episode"] = ep + 1
             episodes_summary.append(ep_stats)
 
+            # ---------------------------------------------------------
+            # Checkpoint y limpieza de memoria cada 10 episodios
+            # ---------------------------------------------------------
+            if (ep + 1) % 10 == 0:
+                save_checkpoints(output_dir, agent, episodes_summary)
+                gc.collect()  # Fuerza a Python a liberar memoria RAM huérfana
+
             elapsed_total = time.perf_counter() - start_time
             elapsed_episode = time.perf_counter() - episode_start
             progress_pct = ((ep + 1) / num_episodes) * 100
@@ -278,9 +306,13 @@ def train_agent(
 
 
 if __name__ == "__main__":
+    # Selección aleatoria de satélites
+    num_satellites = 10
+    random_satellite_ids = tuple(random.sample(range(1, 1081), num_satellites))
+
     # A. Configuración del simulador
     sim_config = SimulationConfig(
-        satellite_ids=(1, 2),
+        satellite_ids=random_satellite_ids,
         num_users=100,
         duration_s=5400.0,
         step_s=10.0,
@@ -310,7 +342,7 @@ if __name__ == "__main__":
         config=sim_config,
         reward_weights=pesos_recompensa,
         agent_params=parametros_agente,
-        num_episodes=20,         # 400 episodios es un buen balance para empezar
+        num_episodes=100,          # 400 episodios es un buen balance para empezar
         base_seed=1000,           # Semilla base para generalizar usuarios
         congestion_threshold=2.5,
         urgency_threshold_s=30.0

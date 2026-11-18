@@ -1,15 +1,19 @@
 # estimate_congestion.py
 from __future__ import annotations
+import random
 import gymnasium as gym
 import numpy as np
 
 from meteogym import SimulationConfig
 from random_agent import RandomAgent
 
-def run_congestion_estimation(num_episodes: int = 5) -> None:
+def run_congestion_estimation(num_episodes: int = 3) -> None:
+    num_satellites = 10
+    random_satellite_ids = tuple(random.sample(range(1, 1081), num_satellites))
+    
     print(f"Iniciando estimación de congestión para {num_episodes} episodios...")
     config = SimulationConfig(
-        satellite_ids=(1, 2),
+        satellite_ids=random_satellite_ids,
         num_users=100,
         duration_s=5400.0,
         step_s=10.0,
