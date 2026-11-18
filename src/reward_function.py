@@ -31,7 +31,7 @@ def compute_custom_reward(
     for event in info.get("task_events", []):
         if event["status"] == "completed":
             n_tasks_exitosas += 1
-        elif event["status"] == "failed":
+        else:
             # Si satellite_id es None, ningún satélite la tomó antes de fallar/expirar
             if event.get("satellite_id") is None:
                 n_tasks_fallidas_no_asignadas += 1
@@ -40,10 +40,9 @@ def compute_custom_reward(
                 
     # 2. Contadores de estado del satélite
     
-    # N_satelites_descargados: 
-    # Un satélite se considera descargado si available == False (entró en bloqueo por batería baja)
-    available_array = np.array(obs.get("available", []))
-    n_satelites_descargados = int(np.sum(~available_array))
+    # N_satelites_descargados:
+    # Contamos la cantidad de nuevos eventos de falla de batería en el último paso
+    n_satelites_descargados = len(info.get("battery_failure_events", []))
     
     # N_satelites_ociosos:
     # Encendidos (effective_active == True) pero sin procesar datos (task_energy_j == 0.0)
